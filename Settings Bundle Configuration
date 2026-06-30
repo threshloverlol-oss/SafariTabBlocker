@@ -51,7 +51,7 @@
             <key>label</key>
             <string>View Blocked URLs</string>
             <key>type</key>
-            <string>PSSliderCell</string>
+            <string>PSButtonCell</string> <!-- FIXED: Changed from PSSliderCell -->
         </dict>
         
         <!-- Clear All Button -->
@@ -61,7 +61,7 @@
             <key>label</key>
             <string>Clear All Blocked URLs</string>
             <key>type</key>
-            <string>PSSliderCell</string>
+            <string>PSButtonCell</string> <!-- FIXED: Changed from PSSliderCell -->
         </dict>
         
         <!-- Statistics Section -->
@@ -77,7 +77,7 @@
             <key>label</key>
             <string>Total URLs Blocked: $blockedCount</string>
             <key>type</key>
-            <string>PSSliderCell</string>
+            <string>PSTitleValueCell</string> <!-- FIXED: Changed from PSSliderCell -->
         </dict>
     </array>
     
