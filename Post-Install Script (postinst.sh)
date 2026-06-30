@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Safari Tab Blocker post-install script
+# Handles rootless Palera1n compatibility
+
+set -e
+
+echo "[SafariTabBlocker] Starting installation..."
+
+# Create preferences directory if it doesn't exist
+mkdir -p /var/mobile/Library/Preferences
+
+# Set proper permissions for the database path
+chmod 755 /var/mobile/Library/Preferences
+
+# Initialize SQLite database with schema
+DB_PATH="/var/mobile/Library/Preferences/SafariTabBlocker.sqlite"
+
+if [ ! -f "$DB_PATH" ]; then
+    echo "[SafariTabBlocker] Creating new database..."
+    
+    sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS urls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT UNIQUE NOT NULL,
+        type TEXT CHECK(type IN ('block', 'whitelist')) NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );"
+    
+    echo "[SafariTabBlocker] Database initialized successfully."
+fi
+
+# Set ownership for rootless compatibility
+chown mobile:mobile "$DB_PATH" 2>/dev/null || true
+chmod 644 "$DB_PATH" 2>/dev/null || true
+
+# Kill Safari to reload the tweak
+killall -9 com.apple.Safari >/dev/null 2>&1 || true
+
+echo "[SafariTabBlocker] Installation complete. Please restart Safari."
