@@ -1,0 +1,38 @@
+name: Build Safari Tab Blocker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compile Tweak
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: Setup iOS SDKs
+        run: git clone https://github.com/theos/sdks.git ${{ github.workspace }}/theos/sdks
+
+      - name: Build Package (.deb)
+        run: make package FINALPACKAGE=1
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafariTabBlocker-deb
+          path: packages/*.deb
