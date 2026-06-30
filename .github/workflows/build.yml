@@ -33,8 +33,7 @@ jobs:
 
       - name: Build Package (.deb)
         run: |
-          export THEOS=${{ github.workspace }}/theos
-          make package FINALPACKAGE=1
+          make package THEOS_PATH=${{ github.workspace }}/theos FINALPACKAGE=1
         env:
           THEOS: ${{ github.workspace }}/theos
 
