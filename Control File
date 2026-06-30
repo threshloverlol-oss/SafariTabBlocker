@@ -1,0 +1,15 @@
+Package: com.yourname.safaritabblocker
+Name: Safari Tab Blocker
+Version: 1.0.0
+Architecture: arm64e
+Maintainer: Your Name <your@email.com>
+Description: Intercept and block unwanted URL redirects in Safari on iPadOS 17
+ Description-Name: Safari Tab Blocker
+ Description-Short: Block unwanted URL redirects with persistent storage
+ Depends: mobilesubstrate, ios-settings-api (>= 2.0)
+ Conflicts: com.other.safaritabblocker
+ Section: Tweaks
+ Author: Your Name <your@email.com>
+ Homepage: https://github.com/yourname/safaritabblocker
+ Package-Type: both
+ Rootless: true
