@@ -16,8 +16,8 @@
 
 - (instancetype)initWithTitle:(NSString *)title 
                       message:(NSString *)message 
-                    blockAction:(void (^)(void))blockAction 
-                  whitelistAction:(void (^)(void))whitelistAction;
+                  blockAction:(void (^)(void))blockAction 
+              whitelistAction:(void (^)(void))whitelistAction;
 
 - (void)show;
 - (void)dismiss;
@@ -28,8 +28,8 @@
 
 - (instancetype)initWithTitle:(NSString *)title 
                       message:(NSString *)message 
-                    blockAction:(void (^)(void))blockAction 
-                  whitelistAction:(void (^)(void))whitelistAction {
+                  blockAction:(void (^)(void))blockAction 
+              whitelistAction:(void (^)(void))whitelistAction {
     self = [super init];
     if (self) {
         _title = title;
@@ -65,9 +65,10 @@
                                                        [_alertController dismissViewControllerAnimated:YES completion:nil];
                                                    }];
         
-        [_alertController addAction:blockButton);
-        [_alertController addAction:whitelistButton);
-        [_alertController addAction:cancelButton)];
+        // FIXED: Replaced closing parentheses with brackets
+        [_alertController addAction:blockButton];
+        [_alertController addAction:whitelistButton];
+        [_alertController addAction:cancelButton];
     }
     return self;
 }
