@@ -1,8 +1,8 @@
 # Makefile for Safari Tab Blocker
 # Targets iPadOS 17 with Rootless Palera1n support
 
-THEOS := $(shell which theos)
-include $(THEOS)/makefiles/common.mk
+THEOS_PATH ?= $(THEOS)
+include $(THEOS_PATH)/makefiles/common.mk
 
 TWEAK_NAME = SafariTabBlocker
 TWEAK_BUNDLE_ID = com.yourname.safaritabblocker
