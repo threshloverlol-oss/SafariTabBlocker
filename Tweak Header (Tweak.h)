@@ -1,0 +1,25 @@
+// Tweak.h - Safari Tab Blocker header file
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+
+// Association keys for storing objects on hooked classes
+extern const void *OBJC_ASSOC_KEY_URL;
+extern const void *OBJC_ASSOC_KEY_DECISION_HANDLER;
+extern const void *OBJC_ASSOC_KEY_NAVIGATION_TYPE;
+
+// Block types enumeration
+typedef NS_ENUM(NSInteger, URLBlockType) {
+    URLBlockTypeNone = 0,
+    URLBlockTypeBlocked = 1,
+    URLBlockTypeWhitelisted = 2
+};
+
+// Forward declarations
+@class WKWebView;
+@class WKNavigationAction;
+@class BlockPrompt;
+
+// Function prototypes for UI operations
+void presentBlockPromptForURL(NSString *urlString);
+BOOL isURLBlocked(NSString *urlString);
+BOOL isURLWhitelisted(NSString *urlString);
