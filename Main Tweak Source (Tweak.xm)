@@ -7,6 +7,40 @@
 #import "URLManager.h"
 #import "BlockPrompt.h"
 
+// FIXED: Declare Associated Object Keys globally
+static const void *OBJC_ASSOC_KEY_URL = &OBJC_ASSOC_KEY_URL;
+static const void *OBJC_ASSOC_KEY_DECISION_HANDLER = &OBJC_ASSOC_KEY_DECISION_HANDLER;
+
+// FIXED: Wrap the Toast method in a Category on UIWindow
+@interface UIWindow (Toast)
+- (void)makeToastWithMessage:(NSString *)message duration:(NSTimeInterval)duration;
+@end
+
+@implementation UIWindow (Toast)
+- (void)makeToastWithMessage:(NSString *)message duration:(NSTimeInterval)duration {
+    UIView *toastView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width - 40, 60)];
+    toastView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.8];
+    toastView.layer.cornerRadius = 10;
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 15, self.bounds.size.width - 80, 30)];
+    label.text = message;
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.font = [UIFont systemFontOfSize:14];
+    
+    [toastView addSubview:label];
+    toastView.center = CGPointMake(self.bounds.size.width / 2, self.bounds.size.height - 100);
+    
+    [self addSubview:toastView];
+    
+    [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+        toastView.alpha = 0;
+    } completion:^(BOOL finished) {
+        [toastView removeFromSuperview];
+    }];
+}
+@end
+
 // Hook declarations for Safari URL interception
 %hook _WKNavigationDelegate
 - (void)webView:(id)arg1 didStartProvisionalNavigation:(id)arg2 forFrame:(id)arg3;
@@ -55,12 +89,11 @@ static BOOL isURLBlocked(NSString *urlString) {
     @synchronized (@selector(isURLBlocked)) {
         blockCache[urlString] = @(blocked);
         
-        // Limit cache size to prevent memory issues
+        // FIXED: Replaced Swift syntax with valid Objective-C for cache truncation
         if (blockCache.count > 1000) {
             NSArray *keys = [blockCache allKeys];
-            for (NSString *key in keys[0..<min(500, keys.count)] ) {
-                [blockCache removeObjectForKey:key];
-            }
+            NSArray *keysToRemove = [keys subarrayWithRange:NSMakeRange(0, MIN(500, keys.count))];
+            [blockCache removeObjectsForKeys:keysToRemove];
         }
     }
     
@@ -84,11 +117,11 @@ static BOOL isURLWhitelisted(NSString *urlString) {
     @synchronized (@selector(isURLWhitelisted)) {
         whitelistCache[urlString] = @(whitelisted);
         
+        // FIXED: Replaced Swift syntax with valid Objective-C for cache truncation
         if (whitelistCache.count > 1000) {
             NSArray *keys = [whitelistCache allKeys];
-            for (NSString *key in keys[0..<min(500, keys.count)] ) {
-                [whitelistCache removeObjectForKey:key];
-            }
+            NSArray *keysToRemove = [keys subarrayWithRange:NSMakeRange(0, MIN(500, keys.count))];
+            [whitelistCache removeObjectsForKeys:keysToRemove];
         }
     }
     
@@ -104,30 +137,30 @@ static void presentBlockPromptForURL(NSString *urlString) {
     
     // Create and show the prompt
     activePrompt = [[BlockPrompt alloc] initWithTitle:@"Redirect Detected"
-                                               message:[NSString stringWithFormat:@"Block this URL so it never opens again?\n\n%@", 
-                                                        [urlString length] > 50 ? 
-                                                        [NSString stringWithFormat:@"%@...", [urlString substringToIndex:47]] : 
-                                                        urlString]
-                                               blockAction:^{
-                                                   // User chose to block
-                                                   if (sharedURLManager && currentRedirectedURL) {
-                                                       [sharedURLManager addBlockedURL:currentRedirectedURL];
-                                                       NSLog(@"[SafariTabBlocker] Blocked URL: %@", currentRedirectedURL);
-                                                   }
-                                                   isProcessing = NO;
-                                                   activePrompt = nil;
-                                                   currentRedirectedURL = nil;
-                                               }
-                                               whitelistAction:^{
-                                                   // User chose to whitelist
-                                                   if (sharedURLManager && currentRedirectedURL) {
-                                                       [sharedURLManager addWhitelistedURL:currentRedirectedURL];
-                                                       NSLog(@"[SafariTabBlocker] Whitelisted URL: %@", currentRedirectedURL);
-                                                   }
-                                                   isProcessing = NO;
-                                                   activePrompt = nil;
-                                                   currentRedirectedURL = nil;
-                                               }];
+                                              message:[NSString stringWithFormat:@"Block this URL so it never opens again?\n\n%@", 
+                                                       [urlString length] > 50 ? 
+                                                       [NSString stringWithFormat:@"%@...", [urlString substringToIndex:47]] : 
+                                                       urlString]
+                                          blockAction:^{
+                                              // User chose to block
+                                              if (sharedURLManager && currentRedirectedURL) {
+                                                  [sharedURLManager addBlockedURL:currentRedirectedURL];
+                                                  NSLog(@"[SafariTabBlocker] Blocked URL: %@", currentRedirectedURL);
+                                              }
+                                              isProcessing = NO;
+                                              activePrompt = nil;
+                                              currentRedirectedURL = nil;
+                                          }
+                                      whitelistAction:^{
+                                              // User chose to whitelist
+                                              if (sharedURLManager && currentRedirectedURL) {
+                                                  [sharedURLManager addWhitelistedURL:currentRedirectedURL];
+                                                  NSLog(@"[SafariTabBlocker] Whitelisted URL: %@", currentRedirectedURL);
+                                              }
+                                              isProcessing = NO;
+                                              activePrompt = nil;
+                                              currentRedirectedURL = nil;
+                                          }];
     
     [activePrompt show];
 }
@@ -137,7 +170,7 @@ static void presentBlockPromptForURL(NSString *urlString) {
 
 - (void)webView:(id)arg1 decidePolicyForNavigationAction:(id)arg2 decisionHandler:(void (^)(NSInteger, id))arg3 {
     // Get the URL from navigation action
-    NSURL *url = objc_getAssociatedObject(arg2, &OBJC_ASSOC_KEY_URL);
+    NSURL *url = objc_getAssociatedObject(arg2, OBJC_ASSOC_KEY_URL);
     if (!url) {
         url = (NSURL *)objc_msgSend(arg2, sel_registerName("request"), "URL");
     }
@@ -181,7 +214,7 @@ static void presentBlockPromptForURL(NSString *urlString) {
         presentBlockPromptForURL(urlString);
         
         // Store decision handler for later use
-        objc_setAssociatedObject(self, &OBJC_ASSOC_KEY_DECISION_HANDLER, arg3, OBJC_ASSOC_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, OBJC_ASSOC_KEY_DECISION_HANDLER, arg3, OBJC_ASSOC_RETAIN_NONATOMIC);
     } else {
         %orig;
     }
@@ -219,8 +252,8 @@ static void presentBlockPromptForURL(NSString *urlString) {
 
 %end
 
-// Application lifecycle hooks for cleanup
-static void applicationDidTerminate(UIApplication *app) {
+// FIXED: Changed to valid C-function notification callback
+static void applicationDidEnterBackground(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
     if (sharedURLManager) {
         [sharedURLManager closeDatabase];
         sharedURLManager = nil;
@@ -235,33 +268,9 @@ void load() {
     // Initialize resources early
     initializeResources();
     
-    // Register for application lifecycle events
-    [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(applicationDidTerminate:) 
-                                                 name:UIApplicationDidEnterBackgroundNotification 
-                                               object:nil];
-}
-
-// Helper function to show toast notification
-- (void)makeToastWithMessage:(NSString *)message duration:(NSTimeInterval)duration {
-    UIView *toastView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width - 40, 60)];
-    toastView.backgroundColor = [UIColor blackColor].colorWithAlphaComponent(0.8);
-    toastView.layer.cornerRadius = 10;
-    
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 15, self.bounds.size.width - 80, 30)];
-    label.text = message;
-    label.textColor = [UIColor whiteColor];
-    label.textAlignment = NSTextAlignmentCenter;
-    label.font = [UIFont systemFontOfSize:14];
-    
-    [toastView addSubview:label];
-    toastView.center = CGPointMake(self.bounds.size.width / 2, self.bounds.size.height - 100);
-    
-    [self.window addSubview:toastView];
-    
-    [UIView animateWithDuration:duration animations:^{
-        toastView.alpha = 0;
-    } completion:^(BOOL finished) {
-        [toastView removeFromSuperview];
-    }];
+    // FIXED: Properly register for CoreFoundation lifecycle events in a C function
+    CFNotificationCenterAddObserver(CFNotificationCenterGetLocalCenter(), NULL,
+                                    applicationDidEnterBackground,
+                                    (CFStringRef)UIApplicationDidEnterBackgroundNotification,
+                                    NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 }
