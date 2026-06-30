@@ -1,5 +1,9 @@
 name: Build Safari Tab Blocker
 
+# This block forces the permission settings regardless of repo defaults
+permissions:
+  contents: read
+
 on:
   push:
     branches:
