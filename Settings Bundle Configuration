@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>items</key>
+    <array>
+        <!-- General Section -->
+        <dict>
+            <key>title</key>
+            <string>General Settings</string>
+            <key>type</key>
+            <string>PSGroupCell</string>
+        </dict>
+        
+        <!-- Enable/Disable Toggle -->
+        <dict>
+            <key>default</key>
+            <true/>
+            <key>key</key>
+            <string>enabled</string>
+            <key>label</key>
+            <string>Enable Tab Blocker</string>
+            <key>type</key>
+            <string>PSToggleCell</string>
+        </dict>
+        
+        <!-- Show Notifications Toggle -->
+        <dict>
+            <key>default</key>
+            <true/>
+            <key>key</key>
+            <string>showNotifications</string>
+            <key>label</key>
+            <string>Show Block Notifications</string>
+            <key>type</key>
+            <string>PSToggleCell</string>
+        </dict>
+        
+        <!-- Blocked URLs Section -->
+        <dict>
+            <key>title</key>
+            <string>Blocked URLs</string>
+            <key>type</key>
+            <string>PSGroupCell</string>
+        </dict>
+        
+        <!-- View Blocked URLs Button -->
+        <dict>
+            <key>action</key>
+            <string>viewBlockedURLs</string>
+            <key>label</key>
+            <string>View Blocked URLs</string>
+            <key>type</key>
+            <string>PSSliderCell</string>
+        </dict>
+        
+        <!-- Clear All Button -->
+        <dict>
+            <key>action</key>
+            <string>clearAllURLs</string>
+            <key>label</key>
+            <string>Clear All Blocked URLs</string>
+            <key>type</key>
+            <string>PSSliderCell</string>
+        </dict>
+        
+        <!-- Statistics Section -->
+        <dict>
+            <key>title</key>
+            <string>Statistics</string>
+            <key>type</key>
+            <string>PSGroupCell</string>
+        </dict>
+        
+        <!-- Blocked Count Display -->
+        <dict>
+            <key>label</key>
+            <string>Total URLs Blocked: $blockedCount</string>
+            <key>type</key>
+            <string>PSSliderCell</string>
+        </dict>
+    </array>
+    
+    <key>title</key>
+    <string>Safari Tab Blocker</string>
+</dict>
+</plist>
