@@ -6,6 +6,11 @@ include $(THEOS_PATH)/makefiles/common.mk
 
 ADDITIONAL_CFLAGS = -I$(CURDIR)/Sources
 
+SafariTabBlocker_FILES = \
+    Sources/Tweak.xm \
+    Sources/URLManager.m \
+    Sources/BlockPrompt.m
+
 TWEAK_NAME = SafariTabBlocker
 TWEAK_BUNDLE_ID = com.yourname.safaritabblocker
 TWEAK_VERSION = 1.0.0 # FIXED: Corrected spelling to TWEAK_VERSION
