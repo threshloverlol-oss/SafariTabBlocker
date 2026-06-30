@@ -1,0 +1,267 @@
+// Tweak.xm - Safari Tab Blocker main hooking code
+// Targets iPadOS 17 with Rootless Palera1n support
+
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import <WebKit/WebKit.h>
+#import "URLManager.h"
+#import "BlockPrompt.h"
+
+// Hook declarations for Safari URL interception
+%hook _WKNavigationDelegate
+- (void)webView:(id)arg1 didStartProvisionalNavigation:(id)arg2 forFrame:(id)arg3;
+- (void)webView:(id)arg1 decidePolicyForNavigationAction:(id)arg2 decisionHandler:(void (^)(NSInteger, id))arg3;
+%end
+
+// Safari URL bar hook for in-app indicators
+%hook _WKURLBarView
+- (void)setURL:(NSURL *)url;
+%end
+
+// Global state management
+static BOOL isProcessing = NO;
+static NSString *currentRedirectedURL = nil;
+static BlockPrompt *activePrompt = nil;
+static URLManager *sharedURLManager = nil;
+
+// Initialize shared resources
+static void initializeResources() {
+    if (!sharedURLManager) {
+        @synchronized (@selector(initializeResources)) {
+            if (!sharedURLManager) {
+                NSString *dbPath = [NSString stringWithFormat:@"/var/mobile/Library/Preferences/SafariTabBlocker.sqlite"];
+                sharedURLManager = [[URLManager alloc] initWithDatabasePath:dbPath];
+                [sharedURLManager createTablesIfNeeded];
+            }
+        }
+    }
+}
+
+// Check if URL should be blocked
+static BOOL isURLBlocked(NSString *urlString) {
+    if (!sharedURLManager || !urlString) return NO;
+    
+    // Check cache first for performance
+    static NSMutableDictionary<NSString *, NSNumber *> *blockCache = nil;
+    @synchronized (@selector(isURLBlocked)) {
+        if (!blockCache) blockCache = [[NSMutableDictionary alloc] init];
+        
+        NSNumber *cachedResult = blockCache[urlString];
+        if (cachedResult) return [cachedResult boolValue];
+    }
+    
+    BOOL blocked = [sharedURLManager isURLBlocked:urlString];
+    
+    @synchronized (@selector(isURLBlocked)) {
+        blockCache[urlString] = @(blocked);
+        
+        // Limit cache size to prevent memory issues
+        if (blockCache.count > 1000) {
+            NSArray *keys = [blockCache allKeys];
+            for (NSString *key in keys[0..<min(500, keys.count)] ) {
+                [blockCache removeObjectForKey:key];
+            }
+        }
+    }
+    
+    return blocked;
+}
+
+// Check if URL is whitelisted
+static BOOL isURLWhitelisted(NSString *urlString) {
+    if (!sharedURLManager || !urlString) return NO;
+    
+    static NSMutableDictionary<NSString *, NSNumber *> *whitelistCache = nil;
+    @synchronized (@selector(isURLWhitelisted)) {
+        if (!whitelistCache) whitelistCache = [[NSMutableDictionary alloc] init];
+        
+        NSNumber *cachedResult = whitelistCache[urlString];
+        if (cachedResult) return [cachedResult boolValue];
+    }
+    
+    BOOL whitelisted = [sharedURLManager isURLWhitelisted:urlString];
+    
+    @synchronized (@selector(isURLWhitelisted)) {
+        whitelistCache[urlString] = @(whitelisted);
+        
+        if (whitelistCache.count > 1000) {
+            NSArray *keys = [whitelistCache allKeys];
+            for (NSString *key in keys[0..<min(500, keys.count)] ) {
+                [whitelistCache removeObjectForKey:key];
+            }
+        }
+    }
+    
+    return whitelisted;
+}
+
+// Present block prompt to user
+static void presentBlockPromptForURL(NSString *urlString) {
+    if (isProcessing || activePrompt) return;
+    
+    isProcessing = YES;
+    currentRedirectedURL = urlString;
+    
+    // Create and show the prompt
+    activePrompt = [[BlockPrompt alloc] initWithTitle:@"Redirect Detected"
+                                               message:[NSString stringWithFormat:@"Block this URL so it never opens again?\n\n%@", 
+                                                        [urlString length] > 50 ? 
+                                                        [NSString stringWithFormat:@"%@...", [urlString substringToIndex:47]] : 
+                                                        urlString]
+                                               blockAction:^{
+                                                   // User chose to block
+                                                   if (sharedURLManager && currentRedirectedURL) {
+                                                       [sharedURLManager addBlockedURL:currentRedirectedURL];
+                                                       NSLog(@"[SafariTabBlocker] Blocked URL: %@", currentRedirectedURL);
+                                                   }
+                                                   isProcessing = NO;
+                                                   activePrompt = nil;
+                                                   currentRedirectedURL = nil;
+                                               }
+                                               whitelistAction:^{
+                                                   // User chose to whitelist
+                                                   if (sharedURLManager && currentRedirectedURL) {
+                                                       [sharedURLManager addWhitelistedURL:currentRedirectedURL];
+                                                       NSLog(@"[SafariTabBlocker] Whitelisted URL: %@", currentRedirectedURL);
+                                                   }
+                                                   isProcessing = NO;
+                                                   activePrompt = nil;
+                                                   currentRedirectedURL = nil;
+                                               }];
+    
+    [activePrompt show];
+}
+
+// Hook implementation for navigation policy decisions
+%hook _WKNavigationDelegate
+
+- (void)webView:(id)arg1 decidePolicyForNavigationAction:(id)arg2 decisionHandler:(void (^)(NSInteger, id))arg3 {
+    // Get the URL from navigation action
+    NSURL *url = objc_getAssociatedObject(arg2, &OBJC_ASSOC_KEY_URL);
+    if (!url) {
+        url = (NSURL *)objc_msgSend(arg2, sel_registerName("request"), "URL");
+    }
+    
+    if (!url) {
+        // Call original implementation
+        %orig;
+        return;
+    }
+    
+    NSString *urlString = [url absoluteString];
+    
+    // Initialize resources on first call
+    initializeResources();
+    
+    // Check if URL is already blocked
+    if (isURLBlocked(urlString)) {
+        NSLog(@"[SafariTabBlocker] Blocking previously blocked URL: %@", urlString);
+        
+        // Show brief notification instead of full prompt
+        [[UIApplication sharedApplication].keyWindow makeToastWithMessage:@"Redirect Blocked" 
+                                                                 duration:2.0];
+        
+        // Cancel navigation (policy = 1)
+        if (arg3) arg3(1, nil);
+        return;
+    }
+    
+    // Check if URL is whitelisted
+    if (isURLWhitelisted(urlString)) {
+        %orig;
+        return;
+    }
+    
+    // Detect redirect by checking navigation type
+    NSInteger navigationType = (NSInteger)objc_msgSend(arg2, sel_registerName("navigationType"));
+    
+    // Navigation types: 0=LinkClicked, 1=FormSubmitted, 2=BackForward, 3=Reload, 4=Other
+    if (navigationType == 4 || navigationType == 2) {
+        // Potential redirect detected
+        presentBlockPromptForURL(urlString);
+        
+        // Store decision handler for later use
+        objc_setAssociatedObject(self, &OBJC_ASSOC_KEY_DECISION_HANDLER, arg3, OBJC_ASSOC_RETAIN_NONATOMIC);
+    } else {
+        %orig;
+    }
+}
+
+%end
+
+// Hook URL bar to show blocked URL indicator
+%hook _WKURLBarView
+
+- (void)setURL:(NSURL *)url {
+    if (!sharedURLManager) {
+        initializeResources();
+    }
+    
+    if (url && sharedURLManager) {
+        NSString *urlString = [url absoluteString];
+        
+        // Check and update UI indicator based on URL status
+        if ([sharedURLManager isURLBlocked:urlString]) {
+            // Show blocked indicator in URL bar
+            self.accessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 24, 24)];
+            ((UIView *)self.accessoryView).backgroundColor = [UIColor systemRedColor];
+        } else if ([sharedURLManager isURLWhitelisted:urlString]) {
+            // Show whitelisted indicator
+            self.accessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 24, 24)];
+            ((UIView *)self.accessoryView).backgroundColor = [UIColor systemGreenColor];
+        } else {
+            self.accessoryView = nil;
+        }
+    }
+    
+    %orig;
+}
+
+%end
+
+// Application lifecycle hooks for cleanup
+static void applicationDidTerminate(UIApplication *app) {
+    if (sharedURLManager) {
+        [sharedURLManager closeDatabase];
+        sharedURLManager = nil;
+    }
+}
+
+// Entry point - called when library is loaded
+__attribute__((constructor))
+void load() {
+    NSLog(@"[SafariTabBlocker] Tweak loaded successfully");
+    
+    // Initialize resources early
+    initializeResources();
+    
+    // Register for application lifecycle events
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(applicationDidTerminate:) 
+                                                 name:UIApplicationDidEnterBackgroundNotification 
+                                               object:nil];
+}
+
+// Helper function to show toast notification
+- (void)makeToastWithMessage:(NSString *)message duration:(NSTimeInterval)duration {
+    UIView *toastView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width - 40, 60)];
+    toastView.backgroundColor = [UIColor blackColor].colorWithAlphaComponent(0.8);
+    toastView.layer.cornerRadius = 10;
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 15, self.bounds.size.width - 80, 30)];
+    label.text = message;
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.font = [UIFont systemFontOfSize:14];
+    
+    [toastView addSubview:label];
+    toastView.center = CGPointMake(self.bounds.size.width / 2, self.bounds.size.height - 100);
+    
+    [self.window addSubview:toastView];
+    
+    [UIView animateWithDuration:duration animations:^{
+        toastView.alpha = 0;
+    } completion:^(BOOL finished) {
+        [toastView removeFromSuperview];
+    }];
+}
