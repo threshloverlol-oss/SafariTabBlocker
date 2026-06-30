@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PreferenceSpecifiers</key>
+    <array>
+        <dict>
+            <key>Type</key>
+            <string>Group</string>
+            <key>Title</key>
+            <string>Safari Tab Blocker Settings</string>
+        </dict>
+        
+        <dict>
+            <key>Type</key>
+            <string>Toggle</string>
+            <key>Title</key>
+            <string>Enable Blocking</string>
+            <key>Key</key>
+            <string>enabled</string>
+            <key>DefaultValue</key>
+            <true/>
+        </dict>
+        
+        <dict>
+            <key>Type</key>
+            <string>Button</string>
+            <key>Title</key>
+            <string>View Blocked URLs</string>
+            <key>Action</key>
+            <string>viewBlockedURLs</string>
+        </dict>
+        
+        <dict>
+            <key>Type</key>
+            <string>Button</string>
+            <key>Title</key>
+            <string>Clear All Data</string>
+            <key>Action</key>
+            <string>clearAllData</string>
+        </dict>
+    </array>
+    
+    <key>StringsTable</key>
+    <string>SafariTabBlockerSettings</string>
+</dict>
+</plist>
