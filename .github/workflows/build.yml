@@ -32,7 +32,9 @@ jobs:
           git clone https://github.com/theos/sdks.git ${{ github.workspace }}/theos/sdks
 
       - name: Build Package (.deb)
-        run: make package FINALPACKAGE=1
+        run: |
+          export THEOS=${{ github.workspace }}/theos
+          make package FINALPACKAGE=1
         env:
           THEOS: ${{ github.workspace }}/theos
 
