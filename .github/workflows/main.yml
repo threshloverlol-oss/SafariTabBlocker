@@ -1,0 +1,36 @@
+#!/bin/bash
+# build.sh - Build script for Safari Tab Blocker
+
+set -e
+
+echo "Building Safari Tab Blocker..."
+
+# Clean previous builds
+make clean
+
+# Create package directory structure
+mkdir -p dpkg/SafariTabBlocker/DEBIAN
+mkdir -p dpkg/SafariTabBlocker/data/usr/libexec/dyld
+mkdir -p dpkg/SafariTabBlocker/data/var/mobile/Library/Preferences
+
+# Copy control file
+cp control dpkg/SafariTabBlocker/DEBIAN/control
+
+# Build the tweak using Theos
+make package ARCHS="arm64e" TARGET_DEVICE=1 IPHONEOS_DEPLOYMENT_TARGET=17.0
+
+# Extract and organize files for rootless compatibility
+if [ -f "packages/com.yourname.safaritabblocker_1.0.0_arm64e.deb" ]; then
+    echo "Package created successfully!"
+    
+    # Verify package contents
+    dpkg-deb --contents packages/com.yourname.safaritabblocker_1.0.0_arm64e.deb
+    
+    echo ""
+    echo "To install on your device:"
+    echo "scp packages/com.yourname.safaritabblocker_1.0.0_arm64e.deb root@<device-ip>:/tmp/"
+    echo "ssh root@<device-ip> 'dpkg -i /tmp/com.yourname.safaritabblocker_1.0.0_arm64e.deb'"
+else
+    echo "Build failed!"
+    exit 1
+fi
