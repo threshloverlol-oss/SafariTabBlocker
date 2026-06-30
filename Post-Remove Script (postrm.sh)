@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Safari Tab Blocker post-remove script
+# Cleans up files and settings
+
+set -e
+
+echo "[SafariTabBlocker] Starting uninstallation..."
+
+# Remove database file
+DB_PATH="/var/mobile/Library/Preferences/SafariTabBlocker.sqlite"
+if [ -f "$DB_PATH" ]; then
+    rm -f "$DB_PATH"
+    echo "[SafariTabBlocker] Database removed."
+fi
+
+# Remove settings from user defaults
+defaults delete com.yourname.safaritabblocker 2>/dev/null || true
+
+# Kill Safari to unload the tweak
+killall -9 com.apple.Safari >/dev/null 2>&1 || true
+
+echo "[SafariTabBlocker] Uninstallation complete."
