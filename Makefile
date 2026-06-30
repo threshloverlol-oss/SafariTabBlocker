@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = SafariTabBlocker
 TWEAK_BUNDLE_ID = com.yourname.safaritabblocker
-TWEK_VERSION = 1.0.0
+TWEAK_VERSION = 1.0.0 # FIXED: Corrected spelling to TWEAK_VERSION
 
 # Target configuration for iPadOS 17
 TARGET_DEVICE = YES
