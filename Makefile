@@ -4,6 +4,8 @@
 THEOS_PATH ?= $(THEOS)
 include $(THEOS_PATH)/makefiles/common.mk
 
+ADDITIONAL_CFLAGS = -I$(CURDIR)/Sources
+
 TWEAK_NAME = SafariTabBlocker
 TWEAK_BUNDLE_ID = com.yourname.safaritabblocker
 TWEAK_VERSION = 1.0.0 # FIXED: Corrected spelling to TWEAK_VERSION
